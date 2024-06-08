@@ -65,7 +65,7 @@ class CS(MenuWithField):
             pg.draw.rect(self.surface, camera_border, rect.clip(self.field.rect), max(self.size // 3, 1))
             pg.draw.rect(self.surface, camera_border, rect2.clip(self.field.rect), max(self.size // 4, 1))
 
-            pg.draw.rect(self.surface, red, rect3.clip(self.field.rect), max(self.size // 3, 1))
+            pg.draw.rect(self.surface, red if indx in self.selected_cameras else gray, rect3.clip(self.field.rect), max(self.size // 3, 1))
 
             line = self.field.rect.clipline(pg.Vector2(rect.center) - pg.Vector2(self.size * 5, 0),
                                             pg.Vector2(rect.center) + pg.Vector2(self.size * 5, 0))
@@ -112,7 +112,7 @@ class CS(MenuWithField):
             for i in [[tl, bl], [bl, br], [br, tr], [tr, tl]]:
                 line = self.field.rect.clipline(i[0], i[1])
                 if line:
-                    pg.draw.line(self.surface, col, line[0], line[1], self.size // 3)
+                    pg.draw.line(self.surface, col if indx in self.selected_cameras else gray, line[0], line[1], self.size // 3)
 
     def previous_page(self):
         if self.page > 0:
