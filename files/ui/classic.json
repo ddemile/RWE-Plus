@@ -116,8 +116,10 @@
 	{
 		"buttons":
 		[
-			["Render", [35, 70, 30, 10], [90, 90, 90], "render", "non", "Render project using Drizzle(<[render]>)\nRendering in seperate proccess"],
-			["Camera\nEditor", [3, 83, 14, 14], [90, 90, 90], "CE", "non", "Camera Editor(<[/CE]>)", ["editors.png", [5, 0]]]
+			["Render", [35, 80, 30, 10], [90, 90, 90], "render", "non", "Render project using Drizzle(<[render]>)\nRendering in seperate proccess"],
+			["Camera\nEditor", [3, 83, 14, 14], [90, 90, 90], "CE", "non", "Camera Editor(<[/CE]>)", ["editors.png", [5, 0]]],
+			["Up", [6, 5, 4, 4], [100, 100, 100], "previous_page", "non", "Previous page(<[-rt]>)", ["arrows.png", [1, 0]]],
+			["Down", [6, 77, 4, 4], [100, 100, 100], "next_page", "non", "Next category(<[-lt]>)", ["arrows.png", [2, 0]]]
 		],
 		"labels":[
 			["", [0, 77], [0, 0, 0], 30],
@@ -125,7 +127,7 @@
 		],
 		"d1":
 		{
-			"rect": [0, 0, 0, 0],
+			"rect": [20, 25, 60, 50],
 			"color": [90, 90, 90],
 			"border": [150, 150, 150]
 		}

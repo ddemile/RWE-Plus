@@ -368,6 +368,9 @@ def renderlevel(data):
     level_name = os.path.basename(os.path.splitext(data["path"])[0])
     directory = os.path.join(application_path, "drizzle", "Data", "Levels")
 
+    if not os.path.exists(directory):
+        os.mkdir(directory)
+
     # Logic to render certains cameras
     file = open(fl, "w")
     turntolingo(data, file)
