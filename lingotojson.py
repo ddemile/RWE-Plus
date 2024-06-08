@@ -1,15 +1,16 @@
 import copy
+import json as jsonenc
 import json.decoder
+import math
+import multiprocessing
 import os
 import random
 import re
+import shutil
 import subprocess
-import multiprocessing
-import json as jsonenc
 import sys
 
 from files import *
-import math
 
 notfound = loadimage(path / "notfound.png")
 notfound.set_colorkey(pg.Color(255, 255, 255))
@@ -363,11 +364,28 @@ def inittolist(window: pg.Surface):
 
 def renderlevel(data):
     fl = os.path.splitext(data["path"])[0] + ".txt"
+    drizzle_fl = os.path.splitext(data["path"])[0] + ".render.txt"
+    level_name = os.path.basename(os.path.splitext(data["path"])[0])
+    directory = os.path.join(application_path, "drizzle", "Data", "Levels")
+
+    # Logic to render certains cameras
     file = open(fl, "w")
     turntolingo(data, file)
+
+    camera_manager: dict = data["CM"]
+    cameras: list = camera_manager["cameras"]
+    cameras_to_render = camera_manager.get("camerasToRender")
+    if cameras_to_render:
+        cameras_to_render.sort()
+        camera_manager["cameras"] = [cameras[i] for i in cameras_to_render]
+        
+    drizzle_file = open(drizzle_fl, "w")
+    turntolingo(data, drizzle_file)
+
+    camera_manager["cameras"] = cameras
     #print(f"\"{application_path}/drizzle/Drizzle.ConsoleApp{'' if islinux else '.exe'}")
     # subprocess.Popen([f"{application_path}/drizzle/Drizzle.ConsoleApp{'' if islinux else '.exe'}", "render", fl], shell=True)
-    p = multiprocessing.Process(target=renderlevelProccess, args=(f"{application_path}/drizzle/Drizzle.ConsoleApp{'' if islinux else '.exe'} render {fl}", ))
+    p = multiprocessing.Process(target=renderlevelProccess, args=(f"{application_path}/drizzle/Drizzle.ConsoleApp{'' if islinux else '.exe'} render {drizzle_fl}", ))
     pickedgif = random.choice(list(globalsettings["rendergifimages"].keys()))
     theimage = loadimage(path2gifs / pickedgif)
     fontr: pg.font.Font = fs(30)[0]
@@ -402,6 +420,31 @@ def renderlevel(data):
         pg.display.update()
         clock.tick(30)
         frame += 1
+
+    level_file_path = os.path.join(directory, f"{level_name}.txt")
+    os.remove(drizzle_fl)
+    shutil.move(os.path.join(directory, f"{level_name}.render.txt"), level_file_path)
+
+    levels_images = [f for f in os.listdir(directory) if f.endswith(".png") and f.startswith(f"{level_name}.render_")]
+
+    for f in levels_images:
+        index = int(f.replace(f"{level_name}.render_", "").replace(".png", "")) - 1
+        level_index = cameras_to_render[index] + 1
+        shutil.move(os.path.join(directory, f), os.path.join(directory, f"{level_name}_{level_index}.png"))
+
+    extra_tiles = data["EX2"]["extraTiles"]
+
+    with open(level_file_path, "r+") as level_file:
+        lines = level_file.readlines()
+        vectors: list[pg.Vector2] = []
+        for camera in cameras:
+            pos = pg.Vector2(toarr(camera, "point"))
+            vectors.append(pos)
+        lines[0] = level_name + "\n"
+        lines[3] = "|".join([f"{int(round(vector.x - extra_tiles[0] * 20))},{int(round(vector.y - extra_tiles[1] * 20))}" for vector in vectors]) + "\n"
+        level_file.truncate(0)
+        level_file.seek(0)
+        level_file.writelines(lines)
 
 
 def renderlevelProccess(data):

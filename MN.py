@@ -1,6 +1,7 @@
+import random
+
 from lingotojson import turntolingo
 from menuclass import *
-import random
 
 
 class MN(MenuWithField):
@@ -63,8 +64,9 @@ class MN(MenuWithField):
         self.saveasf()
 
     def render(self):
-        self.savef()
-        renderlevel(self.data)
+        self.sendtoowner("CS")
+        # self.savef()
+        # renderlevel(self.data)
 
     def quit(self):
         self.sendtoowner("quit")

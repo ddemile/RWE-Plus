@@ -75,6 +75,9 @@
   	  	"K_h": "/HK"
 
   	},
+	"CS": {
+		"unlock_keys": ["K_LEFT", "K_RIGHT", "K_UP", "K_DOWN"]
+	},
   	"GE": {
   		"unlock_keys": ["K_LEFT", "K_RIGHT", "K_UP", "K_DOWN"],
 
