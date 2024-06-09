@@ -1,7 +1,7 @@
 {
 	"global": {
-		"color": "#828282",
-		"color2": "#606060",
+		"color": "#1F1F1F",
+		"color2": "#494949",
 		"width": 1280,
 		"height": 720,
 		"fullscreen": false,
@@ -10,7 +10,7 @@
 		"size": 100,
 		"font": "defaultfont.ttf",
 		"titlefont": "Rodondo.otf",
-		"roundbuttons": 10,
+		"roundbuttons": 3,
 		"doublerect": true,
 		"doublerectoffsetx": 4,
 		"doublerectoffsety": 4,
@@ -44,23 +44,36 @@
 			"grid": [160, 0, 0],
 
 			"tooltip": [255, 255, 255],
-			"buttontext": [0, 0, 0],
+			"buttontext": [255, 255, 255],
 			"buttontextlight": [255, 255, 255],
-			"mosttextcolor": [0, 0, 0]
+			"mosttextcolor": [255, 255, 255]
 		}
 	},
 	"LD":
 	{
 		"buttons": 
 		[
-			["Open", [0, 0, 5, 4], [100, 100, 100], "open", "non", "Open project(<[open]>)"],
-			["New", [5, 0, 5, 4], [100, 100, 100], "new", "non", "New project(<[new]>)"],
-			["Tutorial", [11, 0, 6, 4], [90, 90, 90], "tutorial", "non", "Tutorial for new users"],
-			["Report", [80, 0, 10, 4], [70, 70, 70], "report", "non", "Report a bug"],
-			["Github", [90, 0, 10, 4], [70, 70, 70], "github", "non", "Go to RWE+ github"]
+			
+		],
+		"top_menu": [
+			{
+				"name":"File",
+				"items": [
+					["Open", "open"],
+					["New", "new"]
+				]
+			},
+			{
+				"name": "Help",
+				"items": [
+					["Help", "tutorial"],
+					["Report", "report"],
+					["Github", "github"]
+				]
+			}
 		],
 		"s1": {
-			"catpos": [0, 5, 100, 6],
+			"catpos": [0, 10, 100, 6],
 			"itempos": [0, 5, 100, 5]
 		},
 		"category_count": 20,
@@ -71,45 +84,64 @@
 	{
 		"buttons":
 		[
-			["Geometry\nEditor", [0, 86, 13, 14], [90, 90, 90], "GE", "non", "Geometry Editor(<[/GE]>)", ["editors.png", [0, 0]]],
-			["Tile\nEditor", [13, 86, 13, 14], [90, 90, 90], "TE", "non", "Tile Editor(<[/TE]>)", ["editors.png", [1, 0]]],
-			["Camera\nEditor", [26, 86, 13, 14], [90, 90, 90], "CE", "non", "Camera Editor(<[/CE]>)", ["editors.png", [5, 0]]],
-			["Light\nEditor", [39, 86, 13, 14], [90, 90, 90], "LE", "non", "Light Editor(<[/LE]>)", ["editors.png", [3, 0]]],
-			["Effect\nEditor", [52, 86, 13, 14], [90, 90, 90], "FE", "non", "Effect Editor(<[/FE]>)", ["editors.png", [2, 0]]],
-			["Prop\nEditor", [65, 86, 13, 14], [90, 90, 90], "PE", "non", "Prop Editor(<[/PE]>)", ["editors.png", [4, 0]]],
-			["Level\nProperties", [78, 86, 13, 14], [90, 90, 90], "LP", "non", "Level Properties(<[/LP]>)", ["editors.png", [1, 1]]],
-			["Hotkeys", [91, 86, 9, 14], [90, 90, 90], "HK", "non", "Hotkeys(<[/HK]>)", ["editors.png", [2, 1]]],
-
-			["Report", [70, 10, 10, 10], [90, 90, 90], "report", "non", "Report a bug", ["urls.png", [1, 0]]],
-			["Github", [80, 10, 10, 10], [90, 90, 90], "github", "non", "Go to RWE+ github", ["urls.png", [0, 0]]],
-			["Rerender", [80, 20, 10, 10], [90, 90, 90], "rerender", "non", "Rerenders current level preview(<[/rerender_all]>)\nIncase if something goes wrong)"],
-
-			["Layer", [90, 48, 10, 14], [90, 90, 90], "swichlayers", "non", "Change layer"],
-			["Toggle\ntiles", [90, 62, 10, 14], [90, 90, 90], "tiles", "non", "Toggle tiles layer"],
-
-			
-			["Render", [90, 10, 10, 10], [90, 90, 90], "render", "non", "Render project using Drizzle(<[render]>)\nRendering in seperate proccess"],
-			["Save", [90, 0, 10, 10], [90, 90, 90], "save", "non", "Save as .wep project(<[/save]>)", ["editors.png", [3, 1]]],
-			["Save As...", [80, 0, 10, 10], [90, 90, 90], "saveas", "non", "Save as .wep project", ["editors.png", [4, 1]]],
-			["Save as txt", [70, 0, 10, 10], [90, 90, 90], "saveastxt", "non", "Save as official level editor file"],
-			["Next tip", [90, 76, 10, 10], [90, 90, 90], "nexttip", "non", "Just next tip)"],
-			["Quit", [90, 20, 10, 10], [90, 90, 90], "quit", "non", "Close current RWE+ process(<[quit]>)", ["editors.png", [5, 1]]],
-
-			["?", [68, 0, 2, 2], [90, 90, 90], "watch_keys", "non", "Hotkeys", ["editors.png", [6, 1]]]
+			["Geometry\nEditor", [0, 86, 12.5, 14], [90, 90, 90], "GE", "non", "Geometry Editor(<[/GE]>)", ["editors.png", [0, 0]]],
+			["Tile\nEditor", [12.5, 86, 12.5, 14], [90, 90, 90], "TE", "non", "Tile Editor(<[/TE]>)", ["editors.png", [1, 0]]],
+			["Camera\nEditor", [25, 86, 12.5, 14], [90, 90, 90], "CE", "non", "Camera Editor(<[/CE]>)", ["editors.png", [5, 0]]],
+			["Light\nEditor", [37.5, 86, 12.5, 14], [90, 90, 90], "LE", "non", "Light Editor(<[/LE]>)", ["editors.png", [3, 0]]],
+			["Effect\nEditor", [50, 86, 12.5, 14], [90, 90, 90], "FE", "non", "Effect Editor(<[/FE]>)", ["editors.png", [2, 0]]],
+			["Prop\nEditor", [62.5, 86, 12.5, 14], [90, 90, 90], "PE", "non", "Prop Editor(<[/PE]>)", ["editors.png", [4, 0]]],
+			["Level\nProperties", [75, 86, 12.5, 14], [90, 90, 90], "LP", "non", "Level Properties(<[/LP]>)", ["editors.png", [1, 1]]],
+			["Hotkeys", [87.5, 86, 12.5, 14], [90, 90, 90], "HK", "non", "Hotkeys(<[/HK]>)", ["editors.png", [2, 1]]]
+		],
+		"top_menu": [
+			{
+				"name": "File",
+				"items": [
+					["Save", "save"],
+					["Save As...", "saveas"],
+					["Save as txt", "saveastxt"],
+					["Exit", "quit"]
+				]
+			},
+			{
+				"name": "Help",
+				"items": [
+					["Next tip", "nexttip"],
+					["Report", "report"],
+					["Github", "github"],
+					["Rerender", "rerender"]
+				]
+			},
+			{
+				"name": "Render",
+				"items": [
+					["Render", "render"]
+				]
+			},
+			{
+				"name": "Preview",
+				"items": [
+					["Layer", "swichlayers"],
+					["Toggle tiles", "tiles"],
+					["Toggle cameras", "cameras"],
+					["Toggle props", "props"],
+					["Toggle effects", "effects"],
+					["Toggle water", "water"]
+				]
+			}
 		],
 		"labels":[
-			["", [0, 77], [0, 0, 0], 30],
+			["", [0, 77], [255, 255, 255], 30],
 			["Tip:", [0, 73], [255, 255, 255], 30],
-			["RWE+", [0, 4.5], [20, 20, 20], 150],
-			["Made by timofey26 with <3", [0, 0], [110, 110, 110], 30],
-			["MMB - Move", [2, 20], [255, 255, 255], 25]
-
+			["RWE+", [40, 4.5], [200, 200, 200], 150],
+			["Made by timofey26 with <3", [75, 81], [150, 150, 150], 30],
+			["MMB - Move", [0, 4], [255, 255, 255], 25]
 		],
 		"d1":
 		{
-			"rect": [2, 20, 60, 50],
-			"color": [90, 90, 90],
-			"border": [150, 150, 150]
+			"rect": [0, 0, 100, 86],
+			"color": [50, 50, 50],
+			"border": null
 		}
 	}, 
 	"CS":

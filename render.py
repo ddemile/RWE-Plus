@@ -1,10 +1,12 @@
-from files import *
+from pathlib import Path
+
 import cv2
 import numpy as np
-from path_dict import PathDict
-from pathlib import Path
-from lingotojson import *
 import pygame as pg
+from path_dict import PathDict
+
+from files import *
+from lingotojson import *
 
 colors = settings["global"]["colors"]  # NOQA
 

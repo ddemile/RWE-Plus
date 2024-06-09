@@ -1,9 +1,11 @@
 import copy
+import time
+
+import pyperclip
+
 import render
 import widgets
-import pyperclip
 from render import *
-import time
 
 
 class Menu:
@@ -30,8 +32,22 @@ class Menu:
         self.size = image1size
         self.buttons: list[widgets.Button] = []
         self.labels: list[widgets.Label] = []
+        self.top_menu: widgets.TopMenu = None
 
         widgets.resetpresses()
+
+        if (self.settings.get("top_menu")):
+            dropdowns = copy.deepcopy(self.settings["top_menu"])
+            for dropdown in dropdowns:
+                for button in dropdown["items"]:
+                    try:
+                        f = getattr(self, button[1])
+                    except AttributeError:
+                        f = self.non
+                    button[1] = f
+            self.top_menu = widgets.TopMenu(self, self.surface, dropdowns, 300, "#181818")
+                
+                            
 
         for i in self.settings["buttons"]:
             try:
@@ -44,11 +60,11 @@ class Menu:
                 f2 = self.non
             if len(i) == 6:
                 self.buttons.append(
-                    widgets.Button(self.surface, pg.rect.Rect(i[1]), i[2], i[0], onpress=f,
+                    widgets.TransparentButton(self.surface, pg.rect.Rect(i[1]), i[2], i[0], onpress=f,
                                    onrelease=f2, tooltip=self.returnkeytext(i[5])))
             elif len(i) == 7:
                 self.buttons.append(
-                    widgets.Button(self.surface, pg.rect.Rect(i[1]), i[2], i[0], onpress=f,
+                    widgets.TransparentButton(self.surface, pg.rect.Rect(i[1]), i[2], i[0], onpress=f,
                                    onrelease=f2, tooltip=self.returnkeytext(i[5]), icon=i[6]))
         for i in self.settings["labels"]:
             if len(i) == 3:
@@ -439,6 +455,8 @@ class Menu:
         for i in self.buttons:
             if i.blittooltip():
                 break
+        if self.top_menu:
+            self.top_menu.blit()
         if not pg.mouse.get_pressed(3)[0] and not widgets.enablebuttons:
             widgets.enablebuttons = True
         if pg.key.get_mods() & pg.KMOD_LALT > 0:
@@ -454,10 +472,18 @@ class Menu:
 
     @property
     def touchesanything(self):
-        for b in self.buttons:
-            if b.onmouseover():
+        if self.top_menu:
+            for dropdown in self.top_menu.dropdowns:
+                for button in dropdown.buttons:
+                    if button.onmouseover():
+                        return True
+                if dropdown.trigger.onmouseover():
+                    return True
+        for button in self.buttons:
+            if button.onmouseover():
                 return True
         return False
+
 
     def historyinsert(self, path, value, index):
         if self.hardhistory:
@@ -803,6 +829,13 @@ class MenuWithField(Menu):
 
     @property
     def touchesanything(self):
+        if self.top_menu:
+            for dropdown in self.top_menu.dropdowns:
+                for button in dropdown.buttons:
+                    if button.onmouseover():
+                        return True
+                if dropdown.trigger.onmouseover():
+                    return True
         for b in self.buttons:
             if b.onmouseover():
                 return True

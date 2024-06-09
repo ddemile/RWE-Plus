@@ -1,11 +1,14 @@
-import math
-import pygame as pg
 import copy
+import functools
+import math
+
+import pygame as pg
+
 import files
 import render
-from files import settings, fs, path, map2, allleters, loadimage
+from files import allleters, fs, loadimage, map2, path, settings
 from lingotojson import ItemData
-from render import gray, darkgray
+from render import darkgray, gray
 
 pg.font.init()
 
@@ -288,7 +291,8 @@ class Window:
         w = 6
         b = pg.Rect(self.rect)
         b.update(b.x - w, b.y - w, b.w + w + w, b.h + w + w)
-        pg.draw.rect(self.surface, self.border, b, 6, 6)
+        if self.border:
+            pg.draw.rect(self.surface, self.border, b, 6, 6)
 
     def resize(self):
         self.field = pg.surface.Surface(
@@ -890,3 +894,728 @@ class Notification:
             pg.Rect([self.pos, self.messagelabel.textimage.get_size()]), 20, 20), border_radius=20)
         self.messagelabel.pos = self.pos
         self.messagelabel.blit()
+
+class TransparentButton:
+    def __init__(self, surface: pg.surface.Surface, rect: pg.rect.Rect, color, text: str, icon=None, onpress=None,
+                 onrelease=None, tooltip: str = ""):
+        self.surface = surface
+        self.rect = copy.deepcopy(rect)
+        self.lastrect = copy.deepcopy(rect)
+        self.col = pg.Color(color)
+        self.col.a = 0
+        self.col2.a = 0
+        self.col2 = pg.Color(abs(self.col.r - mul), abs(self.col.g - mul), abs(self.col.b - mul))
+        self.glow = 0
+        self.fontsize = sum(pg.display.get_window_size()) // 74
+        self.enabled = True
+        self.visible = True
+
+        self.text = text
+        self.originaltext = text
+        self.textimage = mts(self.originaltext, buttontextcolor, self.fontsize)
+        self.tooltip = tooltip
+        if files.globalsettings["godmode"]:
+            self.tooltipimage = pg.transform.scale(files.god, fs(self.fontsize)[0].size(self.tooltip))
+        else:
+            self.tooltipimage = mts(self.tooltip, tooltipcolor, self.fontsize)
+
+        self.icon = None
+        if files.globalsettings["godmode"]:
+            icon = files.god
+        self.loadicon = icon
+        if type(icon) is list:
+            cut = [icon[1][0] * settings["global"]["size"], icon[1][1] * settings["global"]["size"],
+                   settings["global"]["size"], settings["global"]["size"]]
+            image = loadimage(path / icon[0]).subsurface(cut)
+            wh = image.get_height() / settings["global"]["size"] * (rect.height / 100 * surface.get_height())
+            size = [wh, wh]
+            image = pg.transform.scale(image, size)
+            self.icon = image
+        elif type(icon) is pg.Surface:
+            self.icon = pg.transform.scale(icon, self.rect.size)
+        self.onpress = onpress
+        self.onrelease = onrelease
+        self.bol = True
+        self.buttondata = {}
+        self.set_text(self.text)
+
+    def set_color(self, color):
+        self.col = pg.Color(color)
+        self.col2 = pg.Color(abs(self.col.r - mul), abs(self.col.g - mul), abs(self.col.b - mul))
+
+    def blit(self, fontsize=None):
+        global bol
+        if not self.enabled:
+            pg.draw.rect(self.surface, darkgray, self.rect, 0, settings["global"]["roundbuttons"])
+            textblit(self.surface, self.textimage, self.rect.center[0], self.rect.center[1], True)
+            return
+        if not self.visible:
+            return
+        if fontsize is not None and fontsize != self.fontsize:
+            self.set_text(self.text, fontsize)
+            if files.globalsettings["godmode"]:
+                self.tooltipimage = pg.transform.scale(files.god, fs(self.fontsize)[0].size(self.tooltip))
+            else:
+                self.tooltipimage = mts(self.tooltip, tooltipcolor, self.fontsize)
+        cp = False
+        if self.onmouseover():
+            pg.mouse.set_cursor(pg.Cursor(pg.SYSTEM_CURSOR_HAND))
+            cp = True
+            self.glow = min(self.glow + 1, 100)
+            if pg.mouse.get_pressed(3)[0] and bol and enablebuttons:
+                self.bol = False
+                bol = False
+                if self.onpress is not None:
+                    try:
+                        self.onpress(self)
+                    except TypeError:
+                        self.onpress()
+            elif not pg.mouse.get_pressed(3)[0] and not bol and enablebuttons:
+                self.bol = True
+                bol = True
+                if self.onrelease is not None:
+                    try:
+                        self.onrelease(self)
+                    except TypeError:
+                        self.onrelease()
+        else:
+            # if not self.bol:
+            #    bol = True
+            #    self.bol = True
+            self.glow = max(0, self.glow - 1)
+        if files.globalsettings["godmode"]:
+            px = self.rect.w / 2 - self.icon.get_width() / 2
+            py = self.rect.h / 2 - self.icon.get_height() / 2
+            pos = [px + self.rect.x, py + self.rect.y]
+            self.surface.blit(self.icon, pos)
+            return
+        paintcol = self.col.lerp(self.col2, self.glow / 100)
+
+        # pg.draw.rect(self.surface, paintcol, self.rect, 0, settings["global"]["roundbuttons"])
+        if self.icon is None:
+            textblit(self.surface, self.textimage, self.rect.center[0], self.rect.center[1], True)
+            # mts(self.surface, self.text, self.rect.center[0], self.rect.center[1],
+            # black, centered=True, fontsize=fontsize)
+        else:
+            g255 = int(self.glow / 100 * 255)
+            self.textimage.set_alpha(g255)
+            textblit(self.surface, self.textimage, self.rect.center[0], self.rect.center[1], True)
+            self.icon.set_alpha(255 - g255)
+            if cp:
+                self.icon.set_alpha(255 - g255)
+            px = self.rect.w / 2 - self.icon.get_width() / 2
+            py = self.rect.h / 2 - self.icon.get_height() / 2
+            pos = [px + self.rect.x, py + self.rect.y]
+            self.surface.blit(self.icon, pos)
+
+    def blitshadow(self):
+        if not self.enabled or not self.visible:
+            return
+        invglow = 100 - self.glow
+        r2 = self.rect.copy()
+        r2 = r2.move(settings["global"]["doublerectoffsetx"] / 100 * invglow,
+                     settings["global"]["doublerectoffsety"] / 100 * invglow)
+        # pg.draw.rect(self.surface, self.col2, r2, 0, settings["global"]["roundbuttons"])
+
+    def blittooltip(self, blittext=True):
+        if not self.visible:
+            return False
+        if self.onmouseover():
+            if blittext:
+                textblit(self.surface, self.tooltipimage, pg.mouse.get_pos()[0], pg.mouse.get_pos()[1] - 20, False)
+            # mts(self.surface, self.tooltip, pg.mouse.get_pos()[0], pg.mouse.get_pos()[1] - 20, white, centered=False)
+            return True
+        return False
+
+    def resize(self):
+        x = self.lastrect.x / 100 * self.surface.get_width()
+        y = self.lastrect.y / 100 * self.surface.get_height()
+        w = self.lastrect.w / 100 * self.surface.get_width() + 1
+        h = self.lastrect.h / 100 * self.surface.get_height() + 1
+        self.rect.update(x, y, w, h)
+        self.set_text(self.text)
+        if type(self.loadicon) is list:
+            cut = [self.loadicon[1][0] * settings["global"]["size"], self.loadicon[1][1] * settings["global"]["size"],
+                   settings["global"]["size"], settings["global"]["size"]]
+            image = loadimage(path / self.loadicon[0]).subsurface(cut)
+            wh = image.get_height() / settings["global"]["size"] * self.rect.height
+            size = [wh, wh]
+            image = pg.transform.scale(image, size)
+            self.icon = image
+        elif type(self.loadicon) is pg.Surface:
+            self.icon = pg.transform.scale(self.loadicon, self.rect.size)
+        self.set_text(self.text, self.fontsize)
+
+    def onmouseover(self):
+        return self.rect.collidepoint(pg.mouse.get_pos()) and self.visible and self.enabled
+
+    def set_tooltip(self, text, fontsize=None):
+        if text == self.tooltip:
+            return
+        self.tooltip = text
+        if files.globalsettings["godmode"]:
+            self.tooltipimage = pg.transform.scale(files.god, fs(self.fontsize)[0].size(self.tooltip))
+        if fontsize is not None:
+            self.tooltipimage = mts(text, tooltipcolor, self.fontsize)
+            return
+        self.tooltipimage = mts(text, tooltipcolor, sum(pg.display.get_window_size()) // 74)
+
+    def set_text(self, text, fontsize=None):
+        if text == self.text and self.fontsize == fontsize:
+            return
+        self.text = text
+        self.fontsize = sum(pg.display.get_window_size()) // 74
+        luma = ((self.col.r * 229) + (self.col.g * 587) + (self.col.b * 114)) / 1000 < 40
+        bc = buttontextcolorlight if luma else buttontextcolor
+        if fontsize is not None:
+            self.fontsize = fontsize
+            self.textimage = mts(text, bc, self.fontsize)
+            return
+        self.textimage = mts(text, bc, sum(pg.display.get_window_size()) // 74)
+
+    @property
+    def xy(self):
+        return [self.rect.x, self.rect.y]
+    
+class TransparentButton:
+    def __init__(self, surface: pg.surface.Surface, rect: pg.rect.Rect, col, text: str, icon=None, onpress=None,
+                 onrelease=None, tooltip: str = ""):
+        self.surface = surface
+        self.rect = copy.deepcopy(rect)
+        self.lastrect = copy.deepcopy(rect)
+        self.col = pg.Color(col)
+        self.col2 = pg.Color(abs(self.col.r - mul), abs(self.col.g - mul), abs(self.col.b - mul))
+        self.glow = 0
+        self.fontsize = sum(pg.display.get_window_size()) // 74
+        self.enabled = True
+        self.visible = True
+
+        self.text = text
+        self.originaltext = text
+        self.textimage = mts(self.originaltext, buttontextcolor, self.fontsize)
+        self.tooltip = tooltip
+        if files.globalsettings["godmode"]:
+            self.tooltipimage = pg.transform.scale(files.god, fs(self.fontsize)[0].size(self.tooltip))
+        else:
+            self.tooltipimage = mts(self.tooltip, tooltipcolor, self.fontsize)
+
+        self.icon = None
+        if files.globalsettings["godmode"]:
+            icon = files.god
+        self.loadicon = icon
+        if type(icon) is list:
+            cut = [icon[1][0] * settings["global"]["size"], icon[1][1] * settings["global"]["size"],
+                   settings["global"]["size"], settings["global"]["size"]]
+            image = loadimage(path / icon[0]).subsurface(cut)
+            wh = image.get_height() / settings["global"]["size"] * (rect.height / 100 * surface.get_height())
+            size = [wh, wh]
+            image = pg.transform.scale(image, size)
+            self.icon = image
+        elif type(icon) is pg.Surface:
+            self.icon = pg.transform.scale(icon, self.rect.size)
+        self.onpress = onpress
+        self.onrelease = onrelease
+        self.bol = True
+        self.buttondata = {}
+        self.set_text(self.text)
+
+    def set_color(self, color):
+        self.col = pg.Color(color)
+        self.col2 = pg.Color(abs(self.col.r - mul), abs(self.col.g - mul), abs(self.col.b - mul))
+
+    def blit(self, fontsize=None):
+        global bol
+        if not self.enabled:
+            pg.draw.rect(self.surface, darkgray, self.rect, 0, settings["global"]["roundbuttons"])
+            textblit(self.surface, self.textimage, self.rect.center[0], self.rect.center[1], True)
+            return
+        if not self.visible:
+            return
+        if fontsize is not None and fontsize != self.fontsize:
+            self.set_text(self.text, fontsize)
+            if files.globalsettings["godmode"]:
+                self.tooltipimage = pg.transform.scale(files.god, fs(self.fontsize)[0].size(self.tooltip))
+            else:
+                self.tooltipimage = mts(self.tooltip, tooltipcolor, self.fontsize)
+        cp = False
+        if self.onmouseover():
+            pg.mouse.set_cursor(pg.Cursor(pg.SYSTEM_CURSOR_HAND))
+            cp = True
+            self.glow = min(self.glow + 1, 100)
+            if pg.mouse.get_pressed(3)[0] and bol and enablebuttons:
+                self.bol = False
+                bol = False
+                if self.onpress is not None:
+                    try:
+                        self.onpress(self)
+                    except TypeError:
+                        self.onpress()
+            elif not pg.mouse.get_pressed(3)[0] and not bol and enablebuttons:
+                self.bol = True
+                bol = True
+                if self.onrelease is not None:
+                    try:
+                        self.onrelease(self)
+                    except TypeError:
+                        self.onrelease()
+        else:
+            # if not self.bol:
+            #    bol = True
+            #    self.bol = True
+            self.glow = max(0, self.glow - 1)
+        if files.globalsettings["godmode"]:
+            px = self.rect.w / 2 - self.icon.get_width() / 2
+            py = self.rect.h / 2 - self.icon.get_height() / 2
+            pos = [px + self.rect.x, py + self.rect.y]
+            self.surface.blit(self.icon, pos)
+            return
+        paintcol = self.col.lerp(self.col2, self.glow / 100)
+
+        # pg.draw.rect(self.surface, paintcol, self.rect, 0, 0)
+        if self.icon is None:
+            textblit(self.surface, self.textimage, self.rect.center[0], self.rect.center[1], True)
+            # mts(self.surface, self.text, self.rect.center[0], self.rect.center[1],
+            # black, centered=True, fontsize=fontsize)
+        else:
+            g255 = int(self.glow / 100 * 255)
+            self.textimage.set_alpha(g255)
+            textblit(self.surface, self.textimage, self.rect.center[0], self.rect.center[1], True)
+            self.icon.set_alpha(255 - g255)
+            if cp:
+                self.icon.set_alpha(255 - g255)
+            px = self.rect.w / 2 - self.icon.get_width() / 2
+            py = self.rect.h / 2 - self.icon.get_height() / 2
+            pos = [px + self.rect.x, py + self.rect.y]
+            self.surface.blit(self.icon, pos)    
+
+    def blitshadow(self):
+        if not self.enabled or not self.visible:
+            return
+        invglow = 100 - self.glow
+        r2 = self.rect.copy()
+        r2 = r2.move(settings["global"]["doublerectoffsetx"] / 100 * invglow,
+                     settings["global"]["doublerectoffsety"] / 100 * invglow)
+        # pg.draw.rect(self.surface, self.col2, r2, 0, settings["global"]["roundbuttons"])
+
+    def blittooltip(self, blittext=True):
+        if not self.visible:
+            return False
+        if self.onmouseover():
+            if blittext:
+                textblit(self.surface, self.tooltipimage, pg.mouse.get_pos()[0], pg.mouse.get_pos()[1] - 20, False)
+            # mts(self.surface, self.tooltip, pg.mouse.get_pos()[0], pg.mouse.get_pos()[1] - 20, white, centered=False)
+            return True
+        return False
+
+    def resize(self):
+        x = self.lastrect.x / 100 * self.surface.get_width()
+        y = self.lastrect.y / 100 * self.surface.get_height()
+        w = self.lastrect.w / 100 * self.surface.get_width() + 1
+        h = self.lastrect.h / 100 * self.surface.get_height() + 1
+        self.rect.update(x, y, w, h)
+        self.set_text(self.text)
+        if type(self.loadicon) is list:
+            cut = [self.loadicon[1][0] * settings["global"]["size"], self.loadicon[1][1] * settings["global"]["size"],
+                   settings["global"]["size"], settings["global"]["size"]]
+            image = loadimage(path / self.loadicon[0]).subsurface(cut)
+            wh = image.get_height() / settings["global"]["size"] * self.rect.height
+            size = [wh, wh]
+            image = pg.transform.scale(image, size)
+            self.icon = image
+        elif type(self.loadicon) is pg.Surface:
+            self.icon = pg.transform.scale(self.loadicon, self.rect.size)
+        self.set_text(self.text, self.fontsize)
+
+    def onmouseover(self):
+        return self.rect.collidepoint(pg.mouse.get_pos()) and self.visible and self.enabled
+
+    def set_tooltip(self, text, fontsize=None):
+        if text == self.tooltip:
+            return
+        self.tooltip = text
+        if files.globalsettings["godmode"]:
+            self.tooltipimage = pg.transform.scale(files.god, fs(self.fontsize)[0].size(self.tooltip))
+        if fontsize is not None:
+            self.tooltipimage = mts(text, tooltipcolor, self.fontsize)
+            return
+        self.tooltipimage = mts(text, tooltipcolor, sum(pg.display.get_window_size()) // 74)
+
+    def set_text(self, text, fontsize=None):
+        if text == self.text and self.fontsize == fontsize:
+            return
+        self.text = text
+        self.fontsize = sum(pg.display.get_window_size()) // 74
+        luma = ((self.col.r * 229) + (self.col.g * 587) + (self.col.b * 114)) / 1000 < 40
+        bc = buttontextcolorlight if luma else buttontextcolor
+        if fontsize is not None:
+            self.fontsize = fontsize
+            self.textimage = mts(text, bc, self.fontsize)
+            return
+        self.textimage = mts(text, bc, sum(pg.display.get_window_size()) // 74)
+
+    @property
+    def xy(self):
+        return [self.rect.x, self.rect.y]
+    
+class Dropdown:
+    GAP = 2
+    PADDING = 5
+    BUTTON_HEIGHT = 22
+
+    def __init__(self, owner, surface: pg.surface.Surface, template, width: float, color, position: pg.Vector2, onopen=None, onclose=None):
+        self.owner = owner
+        self.buttons: list[Dropdown.Button] = []
+        self.surface = surface
+        self.width = width
+        self.onopen = onopen
+        self.onclose = onclose
+        self.col = pg.Color(color)
+        self.col2 = pg.Color(abs(self.col.r - mul), abs(self.col.g - mul), abs(self.col.b - mul))
+        self.glow = 0
+        self.fontsize = sum(pg.display.get_window_size()) // 74
+        self.enabled = True
+        self.visible = False
+        self.template = template
+        self.position = position
+        self.trigger = Dropdown.Button(surface, pg.Rect(position.x, position.y, 80, 20), self.col, "#2D2E2E", template["name"], onpress=self.toggle)
+        self.trigger.set_text(template["name"], 13)
+        self.trigger.rect.w = self.trigger.textimage.get_width() + 20
+        
+        for index, button in enumerate(self.template["items"]):
+            self.buttons.append(Dropdown.Button(surface, pg.Rect(position.x + Dropdown.PADDING, position.y + 20 + Dropdown.PADDING + index * (Dropdown.BUTTON_HEIGHT + Dropdown.GAP), width, Dropdown.BUTTON_HEIGHT), self.col, "#0078D4", button[0], onpress=self.press_handler(button[1]), centered=False))
+
+    def press_handler(self, onpress):
+        def handler(*args):
+            keys = pg.key.get_pressed()
+
+            if keys[pg.K_LSHIFT]:
+                onpress(*args)
+                return
+
+            onpress(*args)
+            self.toggle()
+
+        return handler
+
+
+    def toggle(self):
+        if self.visible:
+            if self.onclose: self.onclose()
+        else:
+            if self.onopen: self.onopen()
+        self.visible = not self.visible
+
+    def set_color(self, color):
+        self.col = pg.Color(color)
+        self.col2 = pg.Color(abs(self.col.r - mul), abs(self.col.g - mul), abs(self.col.b - mul))
+
+    def blit(self, fontsize=None):
+        global bol
+
+        self.trigger.blit(13)
+
+        if (not self.visible):
+            return False
+
+        height = functools.reduce(lambda a, b: a + b, list(map(lambda a: a.rect[3], self.buttons))) + (len(self.buttons) - 1) * Dropdown.GAP + Dropdown.PADDING * 2
+
+        pg.draw.rect(self.surface, self.col, pg.Rect(self.position.x, self.position.y + 20, self.width + Dropdown.PADDING * 2, height), 0, settings["global"]["roundbuttons"])
+
+        for button in self.buttons:
+            button.blitshadow()
+            button.blit(Dropdown.BUTTON_HEIGHT - 7)
+            button.blittooltip()
+
+        if self.visible:
+            self.trigger.glow = 100
+        
+    def resize(self):
+        pass
+        # x = self.lastrect.x / 100 * self.surface.get_width()
+        # y = self.lastrect.y / 100 * self.surface.get_height()
+        # w = self.lastrect.w / 100 * self.surface.get_width() + 1
+        # h = self.lastrect.h / 100 * self.surface.get_height() + 1
+        # self.rect.update(x, y, w, h)
+        # self.set_text(self.text)
+        # if type(self.loadicon) is list:
+        #     cut = [self.loadicon[1][0] * settings["global"]["size"], self.loadicon[1][1] * settings["global"]["size"],
+        #         settings["global"]["size"], settings["global"]["size"]]
+        #     image = loadimage(path / self.loadicon[0]).subsurface(cut)
+        #     wh = image.get_height() / settings["global"]["size"] * self.rect.height
+        #     size = [wh, wh]
+        #     image = pg.transform.scale(image, size)
+        #     self.icon = image
+        # elif type(self.loadicon) is pg.Surface:
+        #     self.icon = pg.transform.scale(self.loadicon, self.rect.size)
+        # self.set_text(self.text, self.fontsize)
+
+    @property
+    def xy(self):
+        return [self.rect.x, self.rect.y]
+
+    class Button:
+        def __init__(self, surface: pg.surface.Surface, rect: pg.rect.Rect, color, hover_color, text: str, icon=None, onpress=None,
+                    onrelease=None, tooltip: str = "", centered: bool = True):
+            self.surface = surface
+            self.rect = copy.deepcopy(rect)
+            self.lastrect = copy.deepcopy(rect)
+            self.col = pg.Color(color)
+            self.hover_color = pg.Color(hover_color)
+            self.glow = 0
+            self.fontsize = sum(pg.display.get_window_size()) // 74
+            self.enabled = True
+            self.visible = True
+            self.centered = centered
+
+            self.text = text
+            self.originaltext = text
+            self.textimage = mts(self.originaltext, buttontextcolor, self.fontsize)
+            self.tooltip = tooltip
+            if files.globalsettings["godmode"]:
+                self.tooltipimage = pg.transform.scale(files.god, fs(self.fontsize)[0].size(self.tooltip))
+            else:
+                self.tooltipimage = mts(self.tooltip, tooltipcolor, self.fontsize)
+
+            self.icon = None
+            if files.globalsettings["godmode"]:
+                icon = files.god
+            self.loadicon = icon
+            if type(icon) is list:
+                cut = [icon[1][0] * settings["global"]["size"], icon[1][1] * settings["global"]["size"],
+                    settings["global"]["size"], settings["global"]["size"]]
+                image = loadimage(path / icon[0]).subsurface(cut)
+                wh = image.get_height() / settings["global"]["size"] * (rect.height / 100 * surface.get_height())
+                size = [wh, wh]
+                image = pg.transform.scale(image, size)
+                self.icon = image
+            elif type(icon) is pg.Surface:
+                self.icon = pg.transform.scale(icon, self.rect.size)
+            self.onpress = onpress
+            self.onrelease = onrelease
+            self.bol = True
+            self.buttondata = {}
+            self.set_text(self.text)
+
+        def set_color(self, color):
+            self.col = pg.Color(color)
+            self.hover_color = pg.Color(abs(self.col.r - mul), abs(self.col.g - mul), abs(self.col.b - mul))
+
+        def blit(self, fontsize=None):
+            global bol
+            if not self.enabled:
+                pg.draw.rect(self.surface, darkgray, self.rect, 0, settings["global"]["roundbuttons"])
+                textblit(self.surface, self.textimage, self.rect.center[0], self.rect.center[1], True)
+                return
+            if not self.visible:
+                return
+            if fontsize is not None and fontsize != self.fontsize:
+                self.set_text(self.text, fontsize)
+                if files.globalsettings["godmode"]:
+                    self.tooltipimage = pg.transform.scale(files.god, fs(self.fontsize)[0].size(self.tooltip))
+                else:
+                    self.tooltipimage = mts(self.tooltip, tooltipcolor, self.fontsize)
+            cp = False
+            if self.onmouseover():
+                pg.mouse.set_cursor(pg.Cursor(pg.SYSTEM_CURSOR_HAND))
+                cp = True
+                self.glow = min(self.glow + 5, 100)
+                if pg.mouse.get_pressed(3)[0] and bol and enablebuttons:
+                    self.bol = False
+                    bol = False
+                    if self.onpress is not None:
+                        try:
+                            self.onpress(self)
+                        except TypeError:
+                            self.onpress()
+                elif not pg.mouse.get_pressed(3)[0] and not bol and enablebuttons:
+                    self.bol = True
+                    bol = True
+                    if self.onrelease is not None:
+                        try:
+                            self.onrelease(self)
+                        except TypeError:
+                            self.onrelease()
+            else:
+                # if not self.bol:
+                #    bol = True
+                #    self.bol = True
+                self.glow = max(0, self.glow - 5)
+            if files.globalsettings["godmode"]:
+                px = self.rect.w / 2 - self.icon.get_width() / 2
+                py = self.rect.h / 2 - self.icon.get_height() / 2
+                pos = [px + self.rect.x, py + self.rect.y]
+                self.surface.blit(self.icon, pos)
+                return
+            paintcol = self.col.lerp(self.hover_color, self.glow / 100)            
+
+            pg.draw.rect(self.surface, paintcol, self.rect, 0, settings["global"]["roundbuttons"])
+            if self.icon is None:
+                textblit(self.surface, self.textimage, self.rect.center[0] if self.centered else self.rect.left + self.textimage.get_width() / 2 + 5, self.rect.center[1], True)
+                # mts(self.surface, self.text, self.rect.center[0], self.rect.center[1],
+                # black, centered=True, fontsize=fontsize)
+            else:
+                g255 = int(self.glow / 100 * 255)
+                self.textimage.set_alpha(g255)
+                textblit(self.surface, self.textimage, self.rect.center[0], self.rect.center[1], True)
+                self.icon.set_alpha(255 - g255)
+                if cp:
+                    self.icon.set_alpha(255 - g255)
+                px = self.rect.w / 2 - self.icon.get_width() / 2
+                py = self.rect.h / 2 - self.icon.get_height() / 2
+                pos = [px + self.rect.x, py + self.rect.y]
+                self.surface.blit(self.icon, pos)
+
+        def blitshadow(self):
+            if not self.enabled or not self.visible:
+                return
+            invglow = 100 - self.glow
+            r2 = self.rect.copy()
+            r2 = r2.move(settings["global"]["doublerectoffsetx"] / 100 * invglow,
+                        settings["global"]["doublerectoffsety"] / 100 * invglow)
+            # pg.draw.rect(self.surface, self.col2, r2, 0, settings["global"]["roundbuttons"])
+
+        def blittooltip(self, blittext=True):
+            if not self.visible:
+                return False
+            if self.onmouseover():
+                if blittext:
+                    textblit(self.surface, self.tooltipimage, pg.mouse.get_pos()[0], pg.mouse.get_pos()[1] - 20, False)
+                # mts(self.surface, self.tooltip, pg.mouse.get_pos()[0], pg.mouse.get_pos()[1] - 20, white, centered=False)
+                return True
+            return False
+
+        def resize(self):
+            x = self.lastrect.x / 100 * self.surface.get_width()
+            y = self.lastrect.y / 100 * self.surface.get_height()
+            w = self.lastrect.w / 100 * self.surface.get_width() + 1
+            h = self.lastrect.h / 100 * self.surface.get_height() + 1
+            self.rect.update(x, y, w, h)
+            self.set_text(self.text)
+            if type(self.loadicon) is list:
+                cut = [self.loadicon[1][0] * settings["global"]["size"], self.loadicon[1][1] * settings["global"]["size"],
+                    settings["global"]["size"], settings["global"]["size"]]
+                image = loadimage(path / self.loadicon[0]).subsurface(cut)
+                wh = image.get_height() / settings["global"]["size"] * self.rect.height
+                size = [wh, wh]
+                image = pg.transform.scale(image, size)
+                self.icon = image
+            elif type(self.loadicon) is pg.Surface:
+                self.icon = pg.transform.scale(self.loadicon, self.rect.size)
+            self.set_text(self.text, self.fontsize)
+
+        def onmouseover(self):
+            return self.rect.collidepoint(pg.mouse.get_pos()) and self.visible and self.enabled
+
+        def set_tooltip(self, text, fontsize=None):
+            if text == self.tooltip:
+                return
+            self.tooltip = text
+            if files.globalsettings["godmode"]:
+                self.tooltipimage = pg.transform.scale(files.god, fs(self.fontsize)[0].size(self.tooltip))
+            if fontsize is not None:
+                self.tooltipimage = mts(text, tooltipcolor, self.fontsize)
+                return
+            self.tooltipimage = mts(text, tooltipcolor, sum(pg.display.get_window_size()) // 74)
+
+        def set_text(self, text, fontsize=None):
+            if text == self.text and self.fontsize == fontsize:
+                return
+            self.text = text
+            self.fontsize = sum(pg.display.get_window_size()) // 74
+            luma = ((self.col.r * 229) + (self.col.g * 587) + (self.col.b * 114)) / 1000 < 40
+            bc = buttontextcolorlight if luma else buttontextcolor
+            if fontsize is not None:
+                self.fontsize = fontsize
+                self.textimage = mts(text, bc, self.fontsize)
+                return
+            self.textimage = mts(text, bc, sum(pg.display.get_window_size()) // 74)
+
+        @property
+        def xy(self):
+            return [self.rect.x, self.rect.y]
+
+class TopMenu:
+    GAP = 2
+    PADDING = 5
+    BUTTON_HEIGHT = 20
+
+    def __init__(self, owner, surface: pg.surface.Surface, templates, width: float, color, icon=None):
+        self.owner = owner
+        self.dropdowns: list[Dropdown] = []
+        self.surface = surface
+        self.width = width
+        self.col = pg.Color(color)
+        self.col2 = pg.Color(abs(self.col.r - mul), abs(self.col.g - mul), abs(self.col.b - mul))
+        self.glow = 0
+        self.fontsize = sum(pg.display.get_window_size()) // 74
+        self.enabled = True
+        self.visible = True
+        self.templates = templates
+        
+        for index, template in enumerate(self.templates):
+            x_offset = 0
+            if len(self.dropdowns) > 0:
+                trigger = self.dropdowns[-1].trigger
+                x_offset = trigger.rect.x + trigger.rect.w + Dropdown.GAP
+                self.width = trigger.rect.x + trigger.rect.w
+            self.dropdowns.append(Dropdown(owner, surface, template, 300, pg.Color("#181818"), pg.Vector2(TopMenu.PADDING + x_offset, TopMenu.PADDING), onopen=self.close_dropdowns))
+
+    def close_dropdowns(self):
+        for dropdown in self.dropdowns:
+            dropdown.visible = False
+
+    def press_handler(self, onpress):
+        def handler(*args):
+            onpress(self.owner, *args)
+            self.toggle()
+
+        return handler
+
+
+    def toggle(self):
+        self.visible = not self.visible
+
+    def set_color(self, color):
+        self.col = pg.Color(color)
+        self.col2 = pg.Color(abs(self.col.r - mul), abs(self.col.g - mul), abs(self.col.b - mul))
+
+    def blit(self, fontsize=None):
+        global bol
+
+        # self.trigger.blit(13)
+
+        if (not self.visible):
+            return False
+
+        # width = functools.reduce(lambda a, b: a + b, list(map(lambda a: a.rect[3], self.dropdowns))) + (len(self.dropdowns) - 1) * Dropdown.GAP + Dropdown.PADDING * 2
+
+        height = TopMenu.BUTTON_HEIGHT + TopMenu.PADDING * 2
+        pg.draw.rect(self.surface, self.col, pg.Rect(0, 0, self.surface.get_width(), height), 0)
+        pg.draw.rect(self.surface, pg.Color("#2B2B2B"), pg.Rect(0, height, self.surface.get_width(), 2), 0)
+
+        for dropdown in self.dropdowns:
+            dropdown.blit()
+        
+    def resize(self):
+        pass
+        # x = self.lastrect.x / 100 * self.surface.get_width()  
+        # y = self.lastrect.y / 100 * self.surface.get_height()
+        # w = self.lastrect.w / 100 * self.surface.get_width() + 1
+        # h = self.lastrect.h / 100 * self.surface.get_height() + 1
+        # self.rect.update(x, y, w, h)
+        # self.set_text(self.text)
+        # if type(self.loadicon) is list:
+        #     cut = [self.loadicon[1][0] * settings["global"]["size"], self.loadicon[1][1] * settings["global"]["size"],
+        #         settings["global"]["size"], settings["global"]["size"]]
+        #     image = loadimage(path / self.loadicon[0]).subsurface(cut)
+        #     wh = image.get_height() / settings["global"]["size"] * self.rect.height
+        #     size = [wh, wh]
+        #     image = pg.transform.scale(image, size)
+        #     self.icon = image
+        # elif type(self.loadicon) is pg.Surface:
+        #     self.icon = pg.transform.scale(self.loadicon, self.rect.size)
+        # self.set_text(self.text, self.fontsize)
+
+    @property
+    def xy(self):
+        return [self.rect.x, self.rect.y]
